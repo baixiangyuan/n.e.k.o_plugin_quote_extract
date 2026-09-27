@@ -8,3 +8,5 @@ dist/
 config.toml
 config/plugin.toml
 uv.lock
+store.db
+

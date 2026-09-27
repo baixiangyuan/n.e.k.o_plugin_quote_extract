@@ -249,7 +249,7 @@ class QuotePlugin(NekoPluginBase):
 
     # ---- 定时自动同步 ----
 
-    @timer_interval(id="auto_sync", seconds=60.0, name="自动同步语录", auto_start=True)
+    @timer_interval(id="auto_sync", seconds=60, name="自动同步语录", auto_start=True)
     async def auto_sync(self, **_):
         if not self._loaded or not self._import_cfg.get("auto_sync"):
             return Ok({"skipped": "disabled"})
