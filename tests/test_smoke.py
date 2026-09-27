@@ -1,19 +1,35 @@
 """插件主体冒烟测试。
 
-依赖根目录 __init__.py 的 SDK 优雅降级：
-在 N.E.K.O 宿主内用真实 SDK，独立环境用空实现垫片，两种情况下都应可导入。
+按文件路径加载插件根 __init__.py（submodule_search_locations 提供包上下文），
+不依赖检出的目录名，也不依赖 sys.path；
+在 N.E.K.O 源码树内则优先以 plugin.plugins 包形式导入。
 """
 
 from __future__ import annotations
 
 import importlib
+import importlib.util
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _import_plugin():
-    try:  # 独立环境：conftest 已把插件根目录加入 sys.path
-        return importlib.import_module("quote_extract")
-    except ImportError:  # N.E.K.O 源码树内：以 plugin.plugins 包形式存在
+    try:  # N.E.K.O 源码树内
         return importlib.import_module("plugin.plugins.quote_extract")
+    except ImportError:
+        pass
+    # 独立环境：按路径作为包加载
+    spec = importlib.util.spec_from_file_location(
+        "quote_extract_standalone",
+        ROOT / "__init__.py",
+        submodule_search_locations=[str(ROOT)],
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_plugin_class_importable():
