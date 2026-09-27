@@ -1,7 +1,7 @@
 [project]
 name = "quote-extract"
 version = "0.1.0"
-description = "N.E.K.O 插件：导入你自己的语录库（R2/D1/WebDAV/直链/本地文件）并随机抽取"
+description = "N.E.K.O 插件：照片语录，随机抽取，隐藏款小概率掉落"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }

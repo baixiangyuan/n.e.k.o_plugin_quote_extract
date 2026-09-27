@@ -1,12 +1,12 @@
 [plugin]
 id = "quote_extract"
-name = "语录抽取"
+name = "照片语录"
 type = "plugin"
-description = "导入你自己的语录库（Cloudflare R2 / D1 / WebDAV / 直链 / 本地文件），随机抽取语录，可让 AI 在对话中主动引用。不内置任何语录。"
-short_description = "Import your own quotes (R2/D1/WebDAV/URL/file) and draw them at random."
-keywords = ["语录", "quote", "quotes", "抽取", "随机", "名言", "R2", "D1", "WebDAV"]
+description = "抽取照片语录：随机抽一张图发送到聊天，普通款为主，隐藏款小概率掉落（盲盒机制）。图库内置并自动同步，开箱即用，无需任何配置。"
+short_description = "Random photo-quote drawer with rare hidden drops."
+keywords = ["照片语录", "语录", "抽图", "表情包", "隐藏款", "盲盒", "随机"]
 version = "0.1.0"
-entry = "plugin.plugins.quote_extract:QuotePlugin"
+entry = "plugin.plugins.quote_extract:PhotoQuotePlugin"
 
 [plugin.author]
 name = "baixiangyuan"

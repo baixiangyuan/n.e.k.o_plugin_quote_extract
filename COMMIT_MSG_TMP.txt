@@ -1,4 +1,0 @@
-fix(ci): test_fetchers 导入布局按验证器环境对齐
-
-ruff --isolated 的 isort 首方/第三方判定跟随 cwd：验证器在插件
-目录之外执行，fetchers 被判为第三方，需与 pytest 同块排列。

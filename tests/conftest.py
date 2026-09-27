@@ -1,7 +1,7 @@
 """把插件根目录加入 sys.path，使 tests 可以直接 import core / fetchers。
 
 插件主体 __init__.py 依赖 N.E.K.O SDK（plugin.sdk.plugin），
-仅在 N.E.K.O 源码树内运行时才可导入；独立运行时相关测试会跳过。
+SDK 缺席时会退化为空实现垫片，因此冒烟测试在独立环境也能运行。
 """
 
 import sys

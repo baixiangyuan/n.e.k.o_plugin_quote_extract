@@ -1,170 +1,91 @@
-"""core.py 单元测试：解析、合并去重、抽取、删除与统计。"""
+"""core.py 单元测试：PROPFIND 解析、分池概率、不重复抽取。"""
 
-import json
+import random
 
-from core import QuoteLibrary, parse_d1_rows, parse_quotes_payload, quote_key, raw_quote
+from core import choose_pool, is_image, mime_for, parse_propfind, pick
 
-
-class TestParsePayload:
-    def test_json_string_array(self):
-        data = json.dumps(["第一条", "第二条"]).encode("utf-8")
-        quotes = parse_quotes_payload(data)
-        assert [q["text"] for q in quotes] == ["第一条", "第二条"]
-        assert quotes[0]["author"] == ""
-
-    def test_json_object_array(self):
-        data = json.dumps([
-            {"text": "路虽远行则将至", "author": "荀子", "tag": "励志"},
-            {"quote": "事虽难做则必成", "author": "荀子", "tags": ["励志", "学习"]},
-        ]).encode("utf-8")
-        quotes = parse_quotes_payload(data)
-        assert quotes[0]["tags"] == ["励志"]
-        assert quotes[1]["text"] == "事虽难做则必成"
-        assert quotes[1]["tags"] == ["励志", "学习"]
-
-    def test_json_wrapper_object(self):
-        data = json.dumps({"quotes": [{"text": "a", "source": "书"}]}).encode("utf-8")
-        quotes = parse_quotes_payload(data)
-        assert len(quotes) == 1
-        assert quotes[0]["source"] == "书"
-
-    def test_json_string_nested_json(self):
-        # 有些接口把 JSON 再套一层字符串
-        inner = json.dumps([{"text": "嵌套"}])
-        quotes = parse_quotes_payload(json.dumps(inner).encode("utf-8"))
-        assert quotes[0]["text"] == "嵌套"
-
-    def test_txt_lines(self):
-        quotes = parse_quotes_payload("第一条\n第二条\n\n第三条".encode())
-        assert [q["text"] for q in quotes] == ["第一条", "第二条", "第三条"]
-
-    def test_txt_author_separator(self):
-        quotes = parse_quotes_payload("路虽远行则将至 —— 荀子".encode())
-        assert quotes[0]["text"] == "路虽远行则将至"
-        assert quotes[0]["author"] == "荀子"
-
-    def test_txt_author_paragraph(self):
-        text = "愿你出走半生，归来仍是少年。\n佚名\n\n第二段语录"
-        quotes = parse_quotes_payload(text.encode("utf-8"))
-        assert quotes[0]["author"] == "佚名"
-        assert quotes[1]["text"] == "第二段语录"
-
-    def test_txt_comment_lines_skipped(self):
-        quotes = parse_quotes_payload("# 这是注释\n真语录".encode())
-        assert [q["text"] for q in quotes] == ["真语录"]
-
-    def test_gbk_decoded(self):
-        quotes = parse_quotes_payload("中文语录".encode("gbk"))
-        assert quotes[0]["text"] == "中文语录"
-
-    def test_bom_stripped(self):
-        quotes = parse_quotes_payload(b"\xef\xbb\xbf" + json.dumps(["BOM"]).encode("utf-8"))
-        assert quotes[0]["text"] == "BOM"
-
-    def test_empty_payload(self):
-        assert parse_quotes_payload(b"") == []
-        assert parse_quotes_payload(b"   \n  ") == []
-
-    def test_blank_entries_dropped(self):
-        assert parse_quotes_payload(json.dumps(["", "  ", "ok"]).encode("utf-8"))[0]["text"] == "ok"
+PROPFIND_SAMPLE = b"""<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response><D:href>/dav/memes/</D:href></D:response>
+  <D:response><D:href>/dav/memes/a.png</D:href></D:response>
+  <D:response><D:href>/dav/memes/b%20c.JPG</D:href></D:response>
+  <D:response><D:href>/dav/memes/note.txt</D:href></D:response>
+</D:multistatus>
+"""
 
 
-class TestMerge:
-    def test_merge_dedupes(self):
-        lib = QuoteLibrary()
-        stats = lib.merge([raw_quote("A"), raw_quote(" A ")])
-        assert stats["imported"] == 1
-        assert stats["total"] == 1
+class TestParsePropfind:
+    def test_hrefs_extracted(self):
+        hrefs = parse_propfind(PROPFIND_SAMPLE)
+        assert "/dav/memes/" in hrefs
+        assert "/dav/memes/a.png" in hrefs
 
-    def test_merge_updates_fields(self):
-        lib = QuoteLibrary()
-        lib.merge([raw_quote("A", author="旧")])
-        stats = lib.merge([raw_quote("A", author="新", tags=["tag1"])])
-        assert stats["updated"] == 1
-        assert stats["skipped"] == 0
-        q = lib.by_id(1)
-        assert q["author"] == "新"
-        assert q["tags"] == ["tag1"]
-
-    def test_merge_skips_identical(self):
-        lib = QuoteLibrary()
-        lib.merge([raw_quote("A", author="x")])
-        stats = lib.merge([raw_quote("A", author="x")])
-        assert stats["skipped"] == 1 and stats["imported"] == 0
-
-    def test_ids_increment(self):
-        lib = QuoteLibrary()
-        lib.merge([raw_quote("1"), raw_quote("2"), raw_quote("3")])
-        assert [lib.by_id(i)["id"] for i in (1, 2, 3)] == [1, 2, 3]
-
-    def test_roundtrip(self):
-        lib = QuoteLibrary()
-        lib.merge([raw_quote("A", tags=["t"])])
-        lib.draw(no_repeat_count=0)
-        clone = QuoteLibrary(json.loads(json.dumps(lib.to_dict())))
-        assert clone.stats()["total"] == 1
-        assert clone.history == lib.history
+    def test_invalid_xml_returns_empty(self):
+        assert parse_propfind(b"<broken") == []
 
 
-class TestDraw:
-    def _lib(self, n=5, tag="t"):
-        lib = QuoteLibrary()
-        lib.merge([raw_quote(f"语录{i}", tags=[tag] if i % 2 else []) for i in range(n)])
-        return lib
+class TestImageFilter:
+    def test_is_image(self):
+        assert is_image("/dav/memes/a.PNG")
+        assert is_image("/dav/memes/b.jpeg")
+        assert not is_image("/dav/memes/note.txt")
+        assert not is_image("/dav/memes/")
 
-    def test_empty_library_returns_none(self):
-        assert QuoteLibrary().draw() is None
+    def test_mime(self):
+        assert mime_for("/x/a.png") == "image/png"
+        assert mime_for("/x/b.JPG") == "image/jpeg"
+        assert mime_for("/x/c.gif") == "image/gif"
+        assert mime_for("/x/weird") == "application/octet-stream"
 
-    def test_tag_filter(self):
-        lib = self._lib()
-        for _ in range(20):
-            picked = lib.draw(tag="t", no_repeat_count=0)
-            assert "t" in picked["tags"]
 
-    def test_unknown_tag_returns_none(self):
-        assert self._lib().draw(tag="不存在") is None
+class TestChoosePool:
+    def test_hidden_hits_by_rate(self):
+        rng = random.Random(42)
+        hits = sum(
+            choose_pool(["n1"], ["h1"], 0.5, rng)[1] for _ in range(200)
+        )
+        assert 60 < hits < 140  # 0.5 概率下 200 次的合理区间
 
+    def test_hidden_rate_zero_never_hidden(self):
+        for _ in range(50):
+            _, is_hidden = choose_pool(["n1"], ["h1"], 0.0, random.Random(1))
+            assert not is_hidden
+
+    def test_empty_hidden_falls_back_to_normal(self):
+        for _ in range(50):
+            pool, is_hidden = choose_pool(["n1"], [], 0.99, random.Random(1))
+            assert pool == ["n1"] and not is_hidden
+
+    def test_empty_normal_falls_back_to_hidden(self):
+        pool, is_hidden = choose_pool([], ["h1"], 0.0, random.Random(1))
+        assert pool == ["h1"] and is_hidden
+
+    def test_both_empty(self):
+        assert choose_pool([], [], 0.5, random.Random(1)) == ([], False)
+
+
+class TestPick:
     def test_no_repeat(self):
-        lib = self._lib(n=3)
-        picked_keys = [lib.draw(no_repeat_count=2)["key"] for _ in range(2)]
-        assert picked_keys[0] != picked_keys[1]
+        pool = ["a", "b", "c"]
+        history: list[str] = []
+        first = pick(pool, history, 2, random.Random(1))
+        second = pick(pool, history, 2, random.Random(1))
+        assert first != second
+        assert history == [first, second]
+
+    def test_repeat_allowed_when_disabled(self):
+        pool = ["a", "b"]
+        history: list[str] = []
+        rng = random.Random(1)
+        results = {pick(pool, history, 0, rng) for _ in range(20)}
+        assert results == {"a", "b"}
 
     def test_history_capped(self):
-        lib = self._lib(n=2)
+        pool = ["a", "b"]
+        history: list[str] = []
         for _ in range(300):
-            lib.draw(no_repeat_count=0)
-        assert len(lib.history) == 200
+            pick(pool, history, 0, random.Random(1))
+        assert len(history) == 200
 
-
-class TestRemoveAndStats:
-    def test_remove_by_id_and_text(self):
-        lib = QuoteLibrary()
-        lib.merge([raw_quote("A"), raw_quote("B")])
-        assert lib.remove(quote_id=1)["text"] == "A"
-        assert lib.remove(text="B")["text"] == "B"
-        assert lib.remove(quote_id=99) is None
-
-    def test_stats(self):
-        lib = QuoteLibrary()
-        lib.merge([raw_quote("A", tags=["励志"]), raw_quote("B", tags=["励志", "学习"])])
-        stats = lib.stats()
-        assert stats["total"] == 2
-        assert stats["tags"] == {"励志": 2, "学习": 1}
-
-
-class TestD1Rows:
-    def test_rows_to_quotes(self):
-        rows = [
-            {"text": "A", "author": "甲", "source": "书", "tag": "励志"},
-            {"quote": "B", "tags": "a,b"},
-            {"text": None},
-        ]
-        quotes = parse_d1_rows(rows)
-        assert len(quotes) == 2
-        assert quotes[0]["author"] == "甲"
-        assert quotes[1]["tags"] == ["a", "b"]
-
-
-def test_quote_key_stable():
-    assert quote_key("一  二") == quote_key("一 二")
-    assert quote_key("一") != quote_key("二")
+    def test_empty_pool(self):
+        assert pick([], [], 5, random.Random(1)) is None

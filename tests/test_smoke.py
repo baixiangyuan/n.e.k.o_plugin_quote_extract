@@ -32,24 +32,30 @@ def _import_plugin():
     return module
 
 
-def test_plugin_class_importable():
+def test_builtin_library_locked():
+    import inspect
+
     mod = _import_plugin()
-    assert mod.SDK_AVAILABLE in (True, False)
-    assert hasattr(mod, "QuotePlugin")
+    lib = mod._BUILTIN_LIBRARY
+    assert lib["webdav_url"].startswith("http")
+    assert lib["normal_folder"] == "/memes/"
+    assert lib["hidden_folder"] == "/memes_hidden/"
+    # 地址与凭据必须以 base64 混淆存储，明文不得出现在插件源码中
+    source = Path(inspect.getsourcefile(mod)).read_text(encoding="utf-8")
+    for secret in (lib["webdav_url"], lib["webdav_username"], lib["webdav_password"]):
+        assert secret not in source
 
 
 def test_all_entries_and_hooks_declared():
-    cls = _import_plugin().QuotePlugin
+    cls = _import_plugin().PhotoQuotePlugin
     for name in (
         "on_startup",
         "on_shutdown",
         "on_config_change",
         "draw",
-        "import_quotes",
-        "add_quote",
-        "remove_quote",
+        "refresh",
         "stats",
-        "auto_sync",
-        "draw_quote",
+        "auto_refresh",
+        "send_meme",
     ):
         assert callable(getattr(cls, name, None)), f"缺少方法：{name}"

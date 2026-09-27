@@ -1,66 +1,15 @@
-# 语录抽取 运行配置模板
-# 首次启动时会被复制到用户数据目录 config/plugin.toml，之后以那份为准。
+# 照片语录 运行配置模板
+# 图库地址与只读凭据已内置锁定，无需也无法在配置中修改。
 
 [plugin_runtime]
 enabled = true
-auto_start = false
+auto_start = true
 
-[quote]
-# 抽取时默认筛选的标签；留空表示从全部语录中抽取
-default_tag = ""
-# 最近抽过的语录在接下来 N 次抽取内不重复；0 表示允许连续重复
-no_repeat_count = 50
-
-[import]
-# 语录来源，不内置任何语录：
-#   none   = 未配置（抽取前必须先导入）
-#   url    = 任意 HTTP(S) 直链，返回 JSON 或纯文本
-#   file   = 本机文件路径
-#   webdav = WebDAV 网盘上的文件
-#   r2     = Cloudflare R2（公开直链 / CF API / S3 兼容三选一）
-#   d1     = Cloudflare D1 数据库（REST API）
-source = "none"
-
-# 是否定时自动从来源同步；手动导入不受影响
-auto_sync = false
-sync_interval_minutes = 60
-
-# ---- source = "url" ----
-# 例如 GitHub Raw / 对象存储公开链接，内容为 JSON 或纯文本
-url = ""
-
-# ---- source = "file" ----
-# 本机文件绝对路径
-local_path = ""
-
-# ---- source = "webdav" ----
-webdav_url = ""          # 例如 https://dav.jianguoyun.com/dav/
-webdav_path = "/quotes/quotes.json"
-webdav_username = ""
-webdav_password = ""     # 坚果云等请使用应用密码
-
-# ---- source = "r2" ----
-# 方式一：公开直链（推荐，最简单）。在 R2 设置里开启 r2.dev 或绑定自定义域后，
-# 填对象完整 URL，例如 https://pub-xxxx.r2.dev/quotes.json
-r2_public_url = ""
-
-# 方式二：Cloudflare API。需要 account_id + bucket + api_token + object_key，
-# API Token 权限：Account / R2: Edit（或只读存储桶对象）
-r2_account_id = ""
-r2_bucket = ""
-r2_api_token = ""
-r2_object_key = "quotes.json"
-
-# 方式三：S3 兼容 API。需要 Access Key（R2 管理 API 令牌页签创建）
-r2_s3_endpoint = ""      # 例如 https://<account_id>.r2.cloudflarestorage.com/<bucket>
-r2_access_key_id = ""
-r2_secret_access_key = ""
-
-# ---- source = "d1" ----
-# Cloudflare Dashboard -> Workers & Pages -> D1 中可找到 account_id 与 database_id
-# API Token 权限：Account / D1: Edit
-d1_account_id = ""
-d1_database_id = ""
-d1_api_token = ""
-# 查询结果需包含 text 列；author/source/tag 列可选
-d1_sql = "SELECT text, author, source, tag FROM quotes"
+[draw]
+# 隐藏款掉率（0 ~ 1）：0.05 表示平均每 20 抽出 1 次隐藏款
+hidden_rate = 0.05
+# 最近抽过的图在接下来 N 次内不重复；0 = 允许连续重复
+no_repeat_count = 20
+# 定时刷新图库列表（图库新增/删除图片后自动生效）
+auto_refresh = true
+refresh_interval_minutes = 10
