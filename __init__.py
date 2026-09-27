@@ -12,8 +12,12 @@ import json
 import os
 import time
 
-from . import fetchers
-from .core import QuoteLibrary, parse_d1_rows, parse_quotes_payload, parse_tags, raw_quote
+try:  # 正常包导入（N.E.K.O 宿主 / 普通测试环境）
+    from . import fetchers
+    from .core import QuoteLibrary, parse_d1_rows, parse_quotes_payload, parse_tags, raw_quote
+except ImportError:  # pytest 8 的 Package.setup 会把插件根 __init__.py 当顶级模块导入，
+    import fetchers  # 此时没有父包上下文，回退到绝对导入（插件根目录在 sys.path 上）
+    from core import QuoteLibrary, parse_d1_rows, parse_quotes_payload, parse_tags, raw_quote
 
 try:  # N.E.K.O 宿主内：使用真实 SDK
     from plugin.sdk.plugin import (
