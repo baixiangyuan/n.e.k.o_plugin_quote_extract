@@ -6,9 +6,8 @@ import json
 import re
 import urllib.error
 
-import pytest
-
 import fetchers
+import pytest
 from fetchers import FetchError, fetch_quotes, sigv4_get_headers
 
 

@@ -104,8 +104,17 @@ webdav_password = "应用密码"
 ## 开发与测试
 
 ```bash
+# 单元测试（独立运行，无需 N.E.K.O 宿主）
 uv run --with pytest python -m pytest tests -q   # 44 个单元测试
-uvx ruff check .                                  # 代码检查
+
+# 代码检查（与 CI / Market 审核一致的 ruff 规则；注意 --isolated 模式下
+# 需在插件目录之外运行，例如在其父目录对插件目录执行）
+uvx ruff==0.12.4 check --ignore-noqa --isolated --target-version py311 \
+  --line-length 120 --select E4,E7,E9,F,I --exclude vendor <插件目录>
+
+# 官方校验 + 打包（在 N.E.K.O 源码根目录）
+uv run neko-plugin check quote_extract
+uv run neko-plugin check -r quote_extract   # 发布级：含测试与 .neko-plugin 构建
 ```
 
 ## 发布到 N.E.K.O 插件市场

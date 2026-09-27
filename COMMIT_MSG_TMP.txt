@@ -1,10 +1,4 @@
-ci: 接入 N.E.K.O 官方标准验证器
+fix(ci): test_fetchers 导入布局按验证器环境对齐
 
-- verify.yml/release.yml/ruff.toml 由 neko-plugin setup-repo 生成，
-  复用 Project-N-E-K-O/N.E.K.O 的 plugin-market-verify/release 共享工作流
-  （Market 自动检查要求调用标准验证器）
-- fix: @timer_interval seconds 改为整数字面量（CLI 静态校验要求 int）
-- style: test_fetchers 导入排序（ruff 0.12.4 --isolated 规则）
-- chore: .gitignore 增加 store.db，补充 .vscode 支持文件
-
-本地已通过 neko-plugin check（0 错误）与 check -r（测试通过 + 构建校验）。
+ruff --isolated 的 isort 首方/第三方判定跟随 cwd：验证器在插件
+目录之外执行，fetchers 被判为第三方，需与 pytest 同块排列。
