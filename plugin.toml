@@ -1,0 +1,16 @@
+[plugin]
+id = "quote_extract"
+name = "语录抽取"
+type = "plugin"
+description = "导入你自己的语录库（Cloudflare R2 / D1 / WebDAV / 直链 / 本地文件），随机抽取语录，可让 AI 在对话中主动引用。不内置任何语录。"
+short_description = "Import your own quotes (R2/D1/WebDAV/URL/file) and draw them at random."
+keywords = ["语录", "quote", "quotes", "抽取", "随机", "名言", "R2", "D1", "WebDAV"]
+version = "0.1.0"
+entry = "plugin.plugins.quote_extract:QuotePlugin"
+
+[plugin.author]
+name = "baixiangyuan"
+
+[plugin.sdk]
+recommended = ">=0.1.0,<0.2.0"
+supported = ">=0.1.0,<0.3.0"
