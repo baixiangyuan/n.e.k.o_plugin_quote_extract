@@ -169,7 +169,7 @@ class QuotePlugin(NekoPluginBase):
 
     @plugin_entry(
         id="draw",
-        name="抽取语录",
+        name="抽语录",
         description="从语录库中随机抽取一条，可按标签筛选",
         llm_result_fields=["text", "author", "source", "tags"],
     )
